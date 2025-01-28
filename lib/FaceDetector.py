@@ -103,7 +103,7 @@ class YuNetDetector(BaseFaceDetector):
     def __init__(
         self,
         model_path: str = "weights/face_detection_yunet_2023mar.onnx",
-        confThreshold: float = 0.75,
+        confThreshold: float = 0.8,
     ):
         self._yunet = YuNet(model_path, confThreshold=confThreshold)
 
@@ -112,8 +112,9 @@ class YuNetDetector(BaseFaceDetector):
         self._yunet.setInputSize((w, h))
         faces = self._yunet.infer(image)
 
-        formatted_faces = [[*face[:4], face[14]] for face in faces]
-        return formatted_faces
+        # formatted_faces = [[*face[:4], face[14]] for face in faces]
+        # return formatted_faces
+        return faces
 
     def detect_single_multiscale(
         self, image, scale_factor=1.1

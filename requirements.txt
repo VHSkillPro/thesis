@@ -1,0 +1,13 @@
+numpy
+opencv-python-headless
+matplotlib
+pandas
+vietocr
+tqdm
+torch
+torchvision
+easyocr
+pytesseract
+imutils
+deepface
+tf-keras
