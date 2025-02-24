@@ -2,12 +2,10 @@ numpy
 opencv-python-headless
 matplotlib
 pandas
-vietocr
 tqdm
-torch
-torchvision
-easyocr
-pytesseract
 imutils
-deepface
+git+https://github.com/deepinsight/insightface.git#subdirectory=python-package
+scikit-learn
 tf-keras
+torch
+onnxruntime-gpu
