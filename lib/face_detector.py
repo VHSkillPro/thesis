@@ -109,7 +109,7 @@ class BaseFaceDetector(ABC):
                 return (None, None)
 
             if len(faces) == 1:
-                return (self._convert_result_format(faces)[0], scale)
+                return (faces[0], scale)
 
             scale /= scale_factor
 
@@ -211,12 +211,12 @@ class YuNetDetector(BaseFaceDetector):
 
     def detect_single_multiscale(
         self, image, scale_factor=1.1
-    ) -> tuple[list[float], float] | None:
+    ) -> tuple[DetectedFace, float] | tuple[None, None]:
         return super().detect_single_multiscale(image, scale_factor)
 
 
 class RetinaFaceDetector(BaseFaceDetector):
-    def __init__(self, confThreshold: float = 0.8):
+    def __init__(self, confThreshold: float = 0.5):
         super().__init__()
         self._retinaface = FaceAnalysis(allowed_modules=["detection"])
         self._retinaface.prepare(ctx_id=0, det_thresh=confThreshold)
@@ -251,7 +251,7 @@ class RetinaFaceDetector(BaseFaceDetector):
 
     def detect_single_multiscale(
         self, image, scale_factor=1.1
-    ) -> tuple[list[float], float] | None:
+    ) -> tuple[DetectedFace, float] | tuple[None, None]:
         assert (
             False
         ), "RetinaFaceDetector does not support detect_single_multiscale method."

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from insightface.app.common import Face
 from lib.entities.face import DetectedFace
 from insightface.model_zoo import get_model
-from insightface.utils import ensure_available
+from insightface.utils import ensure_available, face_align
 
 from lib.sface import SFace
 
