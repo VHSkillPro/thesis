@@ -8,6 +8,7 @@ from insightface.app.common import Face
 from lib.entities.face import DetectedFace
 from insightface.model_zoo import get_model
 from insightface.utils import ensure_available, face_align
+from insightface.model_zoo.arcface_onnx import ArcFaceONNX
 
 from lib.sface import SFace
 
@@ -114,47 +115,40 @@ class SFaceRecognizer(BaseFaceRecognizer):
 
 class ArcFaceRecognizer(BaseFaceRecognizer):
     def __init__(self):
-        model_dir = ensure_available("models", "buffalo_l")
-        onnx_files = glob.glob(osp.join(model_dir, "*.onnx"))
-
-        onnx_file = None
-        for file in onnx_files:
-            if "w600k_r50" in file:
-                onnx_file = file
-                break
-
-        self.recognizer = get_model(onnx_file)
+        self._recognizer = ArcFaceONNX("weights/w600k_r50.onnx")
 
     @override
     def _convert_input_face(self, face: DetectedFace):
         converted_face = Face(
-            bbox=[
-                face.bbox["x"],
-                face.bbox["y"],
-                face.bbox["w"] + face.bbox["x"],
-                face.bbox["h"] + face.bbox["y"],
-            ],
-            kps=[
-                face.landmarks["left_eye"],
-                face.landmarks["right_eye"],
-                face.landmarks["nose"],
-                face.landmarks["left_mouth"],
-                face.landmarks["right_mouth"],
-            ],
+            bbox=np.array(
+                [
+                    face.bbox["x"],
+                    face.bbox["y"],
+                    face.bbox["w"] + face.bbox["x"],
+                    face.bbox["h"] + face.bbox["y"],
+                ]
+            ),
+            kps=np.array(
+                [
+                    face.landmarks["left_eye"],
+                    face.landmarks["right_eye"],
+                    face.landmarks["nose"],
+                    face.landmarks["left_mouth"],
+                    face.landmarks["right_mouth"],
+                ]
+            ),
             det_score=face.confidence,
         )
         return converted_face
 
     @override
     def infer(self, image: cv2.typing.MatLike, face: DetectedFace) -> np.ndarray:
-        converted_face = self._convert_input_face(face)
-
         h, w = image.shape[:2]
-        _x1 = int(max(0, converted_face.bbox[0]))
-        _y1 = int(max(0, converted_face.bbox[1]))
-        _x2 = int(min(w, converted_face.bbox[2]))
-        _y2 = int(min(h, converted_face.bbox[3]))
+        _x1 = int(max(0, face.bbox["x"]))
+        _y1 = int(max(0, face.bbox["y"]))
+        _x2 = int(min(w, face.bbox["x"] + face.bbox["w"]))
+        _y2 = int(min(h, face.bbox["y"] + face.bbox["h"]))
 
         img_face = image[_y1:_y2, _x1:_x2]
-        features = self.recognizer.get_feat(img_face)
+        features = self._recognizer.get_feat(img_face)
         return features

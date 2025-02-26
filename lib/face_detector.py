@@ -1,9 +1,12 @@
 import cv2
 from typing import override
+
+import numpy as np
 from lib.yunet import YuNet
 from abc import ABC, abstractmethod
 from insightface.app import FaceAnalysis
 from lib.entities.face import DetectedFace
+from insightface.model_zoo.retinaface import RetinaFace
 
 
 class BaseFaceDetector(ABC):
@@ -218,35 +221,45 @@ class YuNetDetector(BaseFaceDetector):
 class RetinaFaceDetector(BaseFaceDetector):
     def __init__(self, confThreshold: float = 0.5):
         super().__init__()
-        self._retinaface = FaceAnalysis(allowed_modules=["detection"])
-        self._retinaface.prepare(ctx_id=0, det_thresh=confThreshold)
+        self._retinaface = RetinaFace("weights/det_10g.onnx")
+        self._retinaface.prepare(-1, det_thresh=confThreshold, input_size=(640, 640))
 
     @override
-    def _convert_result_format(self, faces: list[dict]):
-        converted_faces = [
-            DetectedFace(
-                {
-                    "x": face["bbox"][0],
-                    "y": face["bbox"][1],
-                    "w": face["bbox"][2] - face["bbox"][0],
-                    "h": face["bbox"][3] - face["bbox"][1],
-                },
-                {
-                    "left_eye": face["kps"][0],
-                    "right_eye": face["kps"][1],
-                    "nose": face["kps"][2],
-                    "left_mouth": face["kps"][3],
-                    "right_mouth": face["kps"][4],
-                },
-                face["det_score"],
+    def _convert_result_format(
+        self, faces: tuple[np.ndarray, np.ndarray]
+    ) -> list[DetectedFace]:
+        no_faces = faces[0].shape[0]
+        converted_faces = []
+
+        for i in range(no_faces):
+            bbox = faces[0][i][:4]
+            landmarks = faces[1][i]
+            conf = faces[0][i][4]
+
+            converted_faces.append(
+                DetectedFace(
+                    {
+                        "x": bbox[0],
+                        "y": bbox[1],
+                        "w": bbox[2] - bbox[0],
+                        "h": bbox[3] - bbox[1],
+                    },
+                    {
+                        "left_eye": landmarks[0],
+                        "right_eye": landmarks[1],
+                        "nose": landmarks[2],
+                        "left_mouth": landmarks[3],
+                        "right_mouth": landmarks[4],
+                    },
+                    conf,
+                )
             )
-            for face in faces
-        ]
+
         return converted_faces
 
     @override
     def detect(self, image):
-        faces = self._retinaface.get(image)
+        faces = self._retinaface.detect(image)
         return self._convert_result_format(faces)
 
     def detect_single_multiscale(

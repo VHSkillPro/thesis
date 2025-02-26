@@ -4,8 +4,8 @@ matplotlib
 pandas
 tqdm
 imutils
-git+https://github.com/deepinsight/insightface.git#subdirectory=python-package
-scikit-learn
-tf-keras
 torch
-onnxruntime-gpu
+scikit-learn
+onnx
+onnxruntime
+git+https://github.com/deepinsight/insightface.git#subdirectory=python-package
