@@ -5,7 +5,12 @@ pandas
 tqdm
 imutils
 torch
+torchvision
 scikit-learn
+tf-keras
+tensorflow
 onnx
 onnxruntime
+onnxruntime-gpu
+onnx2torch
 git+https://github.com/deepinsight/insightface.git#subdirectory=python-package

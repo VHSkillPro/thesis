@@ -1,12 +1,6 @@
 import cv2
-from typing import override
-
-import numpy as np
-from lib.yunet import YuNet
 from abc import ABC, abstractmethod
-from insightface.app import FaceAnalysis
 from lib.entities.face import DetectedFace
-from insightface.model_zoo.retinaface import RetinaFace
 
 
 class BaseFaceDetector(ABC):
@@ -39,7 +33,7 @@ class BaseFaceDetector(ABC):
                 ...
             ]
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _convert_result_format(self, faces: list) -> list[DetectedFace]:
@@ -70,6 +64,7 @@ class BaseFaceDetector(ABC):
                 ...
             ]
         """
+        raise NotImplementedError()
 
     def detect_single_multiscale(
         self, image: cv2.typing.MatLike, scale_factor: float = 1.1
@@ -172,99 +167,3 @@ class BaseFaceDetector(ABC):
                 )
 
         return drawed_image
-
-
-class YuNetDetector(BaseFaceDetector):
-    def __init__(
-        self,
-        confThreshold: float = 0.8,
-    ):
-        model_path = "weights/face_detection_yunet_2023mar.onnx"
-        self._yunet = YuNet(model_path, confThreshold=confThreshold)
-
-    @override
-    def detect(self, image) -> list[DetectedFace]:
-        h, w = image.shape[:2]
-        self._yunet.setInputSize((w, h))
-        faces = self._yunet.infer(image)
-        return self._convert_result_format(faces)
-
-    @override
-    def _convert_result_format(self, faces: list[list[float]]) -> list[DetectedFace]:
-        converted_faces = [
-            DetectedFace(
-                {
-                    "x": face[0],
-                    "y": face[1],
-                    "w": face[2],
-                    "h": face[3],
-                },
-                {
-                    "left_eye": (face[4], face[5]),
-                    "right_eye": (face[6], face[7]),
-                    "nose": (face[8], face[9]),
-                    "left_mouth": (face[10], face[11]),
-                    "right_mouth": (face[12], face[13]),
-                },
-                face[14],
-            )
-            for face in faces
-        ]
-        return converted_faces
-
-    def detect_single_multiscale(
-        self, image, scale_factor=1.1
-    ) -> tuple[DetectedFace, float] | tuple[None, None]:
-        return super().detect_single_multiscale(image, scale_factor)
-
-
-class RetinaFaceDetector(BaseFaceDetector):
-    def __init__(self, confThreshold: float = 0.5):
-        super().__init__()
-        self._retinaface = RetinaFace("weights/det_10g.onnx")
-        self._retinaface.prepare(-1, det_thresh=confThreshold, input_size=(640, 640))
-
-    @override
-    def _convert_result_format(
-        self, faces: tuple[np.ndarray, np.ndarray]
-    ) -> list[DetectedFace]:
-        no_faces = faces[0].shape[0]
-        converted_faces = []
-
-        for i in range(no_faces):
-            bbox = faces[0][i][:4]
-            landmarks = faces[1][i]
-            conf = faces[0][i][4]
-
-            converted_faces.append(
-                DetectedFace(
-                    {
-                        "x": bbox[0],
-                        "y": bbox[1],
-                        "w": bbox[2] - bbox[0],
-                        "h": bbox[3] - bbox[1],
-                    },
-                    {
-                        "left_eye": landmarks[0],
-                        "right_eye": landmarks[1],
-                        "nose": landmarks[2],
-                        "left_mouth": landmarks[3],
-                        "right_mouth": landmarks[4],
-                    },
-                    conf,
-                )
-            )
-
-        return converted_faces
-
-    @override
-    def detect(self, image):
-        faces = self._retinaface.detect(image)
-        return self._convert_result_format(faces)
-
-    def detect_single_multiscale(
-        self, image, scale_factor=1.1
-    ) -> tuple[DetectedFace, float] | tuple[None, None]:
-        assert (
-            False
-        ), "RetinaFaceDetector does not support detect_single_multiscale method."
